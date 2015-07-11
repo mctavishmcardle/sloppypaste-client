@@ -1,8 +1,10 @@
 from tkinter import *
-import sys, urllib
+import sys, json
+import urllib.parse
+import urllib.request
 
 WATCH_RATE = 4000
-URL = "foo"
+URL = "http://ec2-52-6-196-223.compute-1.amazonaws.com:1337"
 
 class GUI:
     def __init__(self):
@@ -31,20 +33,30 @@ class GUI:
 
         self.tk.mainloop()
 
-    def post_paste(self):
+    def post_paste(self, content):
         payload = urllib.parse.urlencode({
             'text': content
         })
         payload = payload.encode('utf-8')
-        urllib.request.Request(
+        req = urllib.request.Request(
             URL + '/item', data=payload)
+        return req
 
     def get_paste(self):
         req = urllib.request.Request(
             URL + '/item')
 
         with urllib.request.urlopen(req) as response:
-            return response.read()
+            payload = response.read().decode('utf-8')
+            decoded_payload = json.loads(payload)
+            return json.loads(payload)[-1]['text']
+
+            if type(decoded_payload) is list:
+                return decoded_payload[-1]['text']
+            elif type(decoded_payload) is dict:
+                return decoded_payload['text']
+            else:
+                return ''
 
     def listen_off(self):
         self.listen = False
@@ -58,12 +70,13 @@ class GUI:
 
             if content != self.clipboard_content:
                 self.clipboard_content = content
-                print(content)
-                self.post_paste()
+                req = self.post_paste(content)
+                with urllib.request.urlopen(req) as response:
+                    payload = response.read().decode('utf-8')
 
             if self.listen:
                 new_paste = self.get_paste()
-                if new_past != self.clipboard_content:
+                if new_paste != self.clipboard_content:
                     self.tk.clipboard_clear()
                     self.tk.clipboard_append(new_paste)
 
