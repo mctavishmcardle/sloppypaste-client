@@ -1,20 +1,30 @@
 from tkinter import *
-import sys, json
+import sys, json, argparse
 import urllib.parse
 import urllib.request
 
 WATCH_RATE = 4000
 URL = "http://ec2-52-6-196-223.compute-1.amazonaws.com:1337"
 
+parser = argparse.ArgumentParser(description='The sloppypaste client.')
+parser.add_argument('--url', dest='url', default=URL, 
+        help='the server url to connect to')
+parser.add_argument('--rate', dest='rate', default=WATCH_RATE,
+        help='how long (in ms) between buffer checks')
+
 class GUI:
     def __init__(self):
+        args = parser.parse_args()
+        self.url = args.url
+        self.rate = args.rate
+
         self.tk = Tk()
         self.tk.resizable(0,0)
         self.tk.title('sloppy coppy')
 
         self.clipboard_content = u''
 
-        self.tk.after(WATCH_RATE, self.watch_clipboard)
+        self.tk.after(self.rate, self.watch_clipboard)
 
         self.listen = IntVar()
         self.listen.set(True)
@@ -39,12 +49,12 @@ class GUI:
         })
         payload = payload.encode('utf-8')
         req = urllib.request.Request(
-            URL + '/item', data=payload)
+            self.url + '/item', data=payload)
         return req
 
     def get_paste(self):
         req = urllib.request.Request(
-            URL + '/item')
+            self.url + '/item')
 
         with urllib.request.urlopen(req) as response:
             payload = response.read().decode('utf-8')
@@ -83,7 +93,7 @@ class GUI:
         except TclError:
             pass
 
-        self.tk.after(WATCH_RATE, self.watch_clipboard)
+        self.tk.after(self.rate, self.watch_clipboard)
 
 if __name__ == '__main__':
     gui = GUI()
